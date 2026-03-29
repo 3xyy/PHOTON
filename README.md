@@ -1,5 +1,5 @@
 # PHOTON
-## Permissionless High-bandwidth Optical Transmission Over Networks
+## Permissionless High Optical Transmission Over Networks
 
 ![PHOTON](https://img.shields.io/badge/Status-Working-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue) ![Built_with](https://img.shields.io/badge/Built_with-Vanilla_JS-yellow)
 
