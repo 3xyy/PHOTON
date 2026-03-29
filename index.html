@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PHOTON - Optical Communication Protocol</title>
+    <meta name="theme-color" content="#ff00ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="css/photon.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            PHOTON
+            <span>Permissionless High Optical Transmission Over Networks</span>
+        </div>
+        <div class="status-bar" id="header-status" style="display:none">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Disconnected</span>
+            <span id="device-id-display"></span>
+        </div>
+    </div>
+
+    <!-- ============ STEP 1: Mode Selection ============ -->
+    <div id="step-mode" class="wizard-step active">
+        <div class="mode-select-container">
+            <div class="mode-hero">
+                <h1 class="mode-title">PHOTON</h1>
+                <p class="mode-subtitle">Permissionless High-bandwidth Optical Transmission Over Networks</p>
+            </div>
+            <div class="mode-cards">
+                <button class="mode-card" data-mode="send-file">
+                    <div class="mode-icon">&#x2B06;</div>
+                    <div class="mode-label">Send File</div>
+                    <div class="mode-desc">Transmit a file to another device over the optical link</div>
+                </button>
+                <button class="mode-card" data-mode="receive-file">
+                    <div class="mode-icon">&#x2B07;</div>
+                    <div class="mode-label">Receive File</div>
+                    <div class="mode-desc">Receive a file from another device via camera</div>
+                </button>
+                <button class="mode-card" data-mode="messaging">
+                    <div class="mode-icon">&#x1F4AC;</div>
+                    <div class="mode-label">Messaging</div>
+                    <div class="mode-desc">Bidirectional text chat over the optical link</div>
+                </button>
+                <button class="mode-card simplex-card" data-mode="simplex-send">
+                    <div class="mode-icon">&#x26A1;</div>
+                    <div class="mode-label">Send (1-Way)</div>
+                    <div class="mode-desc">Blast QR codes — no camera needed on sender</div>
+                </button>
+                <button class="mode-card simplex-card" data-mode="simplex-receive">
+                    <div class="mode-icon">&#x1F4F7;</div>
+                    <div class="mode-label">Receive (1-Way)</div>
+                    <div class="mode-desc">Scan QR codes from sender — no display needed</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ STEP 2: Calibration ============ -->
+    <div id="step-calibrate" class="wizard-step">
+        <div class="calibrate-layout">
+            <!-- CENTER: Maximized QR code on white background (or simplex-rx panel) -->
+            <div class="calibrate-qr-center" id="calibrate-qr-center">
+                <canvas id="calibrate-tx-canvas"></canvas>
+                <!-- Messaging mode: camera in center alongside QR during calibration -->
+                <div id="msg-cal-camera-center" class="msg-cal-camera-center" style="display:none">
+                    <video id="msg-cal-camera-feed" autoplay playsinline muted></video>
+                    <canvas id="msg-cal-debug-canvas"></canvas>
+                </div>
+                <div id="simplex-rx-cal-panel" class="simplex-rx-panel" style="display:none">
+                    <div class="simplex-rx-icon">&#x1F4F7;</div>
+                    <div class="simplex-rx-title">READY TO RECEIVE</div>
+                    <div class="simplex-rx-hint">Point camera at sender's screen</div>
+                    <div class="simplex-rx-hint" style="margin-top:8px;font-size:11px;color:#888">Make sure QR version &amp; error level<br>match the sender's settings</div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR: Camera, settings, controls -->
+            <div class="calibrate-sidebar">
+                <!-- Camera preview -->
+                <div class="cal-sidebar-section" id="cal-camera-section">
+                    <h3 class="section-label">CAMERA</h3>
+                    <div class="calibrate-camera-wrap">
+                        <video id="calibrate-camera-feed" autoplay playsinline muted></video>
+                        <canvas id="calibrate-debug-canvas"></canvas>
+                    </div>
+                    <div class="cal-cam-controls">
+                        <select id="camera-select">
+                            <option value="">Detecting cameras...</option>
+                        </select>
+                        <label class="cal-checkbox">
+                            <input type="checkbox" id="camera-mirror"> Mirror
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Connection status -->
+                <div class="calibrate-status-box">
+                    <span class="status-dot" id="cal-status-dot"></span>
+                    <span id="cal-status-text">Waiting for camera...</span>
+                </div>
+
+                <!-- QR Settings -->
+                <div class="cal-sidebar-section">
+                    <h3 class="section-label">QR SETTINGS</h3>
+                    <div class="cal-setting-row">
+                        <label>Version</label>
+                        <select id="qr-version">
+                            <option value="3">v3 (29x29)</option>
+                            <option value="4">v4 (33x33)</option>
+                            <option value="5">v5 (37x37)</option>
+                            <option value="6" selected>v6 (41x41)</option>
+                            <option value="8">v8 (49x49)</option>
+                            <option value="10">v10 (57x57)</option>
+                            <option value="15">v15 (77x77)</option>
+                        </select>
+                    </div>
+                    <div class="cal-setting-row">
+                        <label>Error Correction</label>
+                        <select id="qr-error-level">
+                            <option value="L" selected>L - 7%</option>
+                            <option value="M">M - 15%</option>
+                            <option value="Q">Q - 25%</option>
+                            <option value="H">H - 30%</option>
+                        </select>
+                    </div>
+                    <div class="cal-setting-row">
+                        <label>Frame Rate</label>
+                        <select id="frame-rate">
+                            <option value="1000">1 fps</option>
+                            <option value="500">2 fps</option>
+                            <option value="400" selected>2.5 fps</option>
+                            <option value="250">4 fps</option>
+                            <option value="150">6 fps</option>
+                        </select>
+                    </div>
+                    <div id="cal-capacity-display" class="capacity-display">-- bytes/frame</div>
+                </div>
+
+                <!-- DTN (messaging mode) -->
+                <div class="cal-sidebar-section" id="cal-dtn-section" style="display:none">
+                    <h3 class="section-label">DELAY SIM</h3>
+                    <select id="dtn-select">
+                        <option value="none">Direct Link</option>
+                        <option value="moon">Moon (1.3s)</option>
+                        <option value="mars-min">Mars Close (3 min)</option>
+                        <option value="mars-max">Mars Far (22 min)</option>
+                        <option value="jupiter">Jupiter (34 min)</option>
+                    </select>
+                    <div id="dtn-status" class="dtn-status"></div>
+                </div>
+
+                <!-- File select (send mode) -->
+                <div id="cal-file-select" class="cal-sidebar-section" style="display:none">
+                    <h3 class="section-label">FILE TO SEND</h3>
+                    <div class="file-drop" id="cal-file-drop">
+                        <div class="file-drop-text">Drop file or click</div>
+                        <input type="file" id="cal-file-input" style="display:none">
+                    </div>
+                    <div id="cal-file-info" class="cal-file-info"></div>
+                </div>
+
+                <!-- Save location (receive mode) -->
+                <div id="cal-save-section" class="cal-sidebar-section" style="display:none">
+                    <h3 class="section-label">SAVE LOCATION</h3>
+                    <button id="save-location-btn" class="action-btn small">Select Save Folder</button>
+                    <div id="save-location-info" class="save-location-info">Default: browser downloads</div>
+                </div>
+
+                <!-- Start / Back -->
+                <div class="cal-sidebar-actions">
+                    <button id="start-session-btn" class="action-btn start-btn" disabled>START SESSION</button>
+                    <button id="back-to-mode-btn" class="action-btn small">Back</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer status -->
+        <div class="calibrate-footer">
+            <span class="status-dot" id="cal-footer-dot"></span>
+            <span id="cal-footer-text">Scanning for peer...</span>
+        </div>
+    </div>
+
+    <!-- ============ STEP 3: Active Session ============ -->
+    <div id="step-session" class="wizard-step">
+        <div class="session-layout">
+            <!-- CENTER: Maximized QR on white background (or simplex-rx panel) -->
+            <div class="session-qr-center" id="session-qr-center">
+                <canvas id="tx-canvas"></canvas>
+                <!-- Messaging mode: camera in center alongside QR -->
+                <div id="msg-camera-center" class="msg-camera-center" style="display:none">
+                    <video id="msg-camera-feed" autoplay playsinline muted></video>
+                    <canvas id="msg-debug-canvas"></canvas>
+                </div>
+                <div id="simplex-rx-session-panel" class="simplex-rx-panel" style="display:none">
+                    <div class="simplex-rx-icon" id="simplex-rx-icon">&#x1F4F7;</div>
+                    <div class="simplex-rx-title" id="simplex-rx-status-text">RECEIVING</div>
+                    <div class="simplex-rx-filename" id="simplex-rx-filename">Waiting for signal...</div>
+                    <div class="simplex-rx-counter" id="simplex-rx-chunks-big">0 / ?</div>
+                    <div class="simplex-rx-progress-wrap">
+                        <div class="simplex-progress-bar">
+                            <div id="simplex-rx-fill" class="simplex-progress-fill"></div>
+                        </div>
+                        <div id="simplex-rx-pct" class="simplex-rx-pct">0%</div>
+                    </div>
+                    <div class="simplex-rx-debug" id="simplex-rx-debug">
+                        Scans: <span id="simplex-rx-scans">0</span> |
+                        Decoded: <span id="simplex-rx-decoded">0</span> |
+                        Errors: <span id="simplex-rx-errors">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR -->
+            <div class="session-sidebar">
+
+                <!-- Status -->
+                <div class="sess-status-box">
+                    <span class="status-dot" id="ses-status-dot"></span>
+                    <span id="ses-status-text">Connecting...</span>
+                    <span id="session-mode-label" class="sess-mode-badge">MSG</span>
+                </div>
+
+                <!-- Controls -->
+                <div class="sess-controls">
+                    <button id="pause-btn" class="action-btn sess-btn">Pause</button>
+                    <button id="stop-btn" class="action-btn sess-btn danger">Stop</button>
+                </div>
+
+                <!-- Camera -->
+                <div class="cal-sidebar-section" id="sess-camera-section">
+                    <h3 class="section-label">CAMERA</h3>
+                    <div class="sess-camera-wrap">
+                        <video id="camera-feed" autoplay playsinline muted></video>
+                        <canvas id="debug-canvas"></canvas>
+                    </div>
+                    <button id="camera-hide-btn" class="action-btn small dim" style="margin-top:4px;width:100%">Hide Camera</button>
+                </div>
+
+                <!-- Camera select for messaging (camera is in center) -->
+                <div class="cal-sidebar-section" id="sess-msg-camera-section" style="display:none">
+                    <h3 class="section-label">CAMERA</h3>
+                    <select id="camera-select-session" class="cal-cam-controls" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:3px;font-family:inherit;font-size:10px">
+                        <option value="">Detecting cameras...</option>
+                    </select>
+                </div>
+
+                <!-- Simplex TX stats (simplex-send mode) -->
+                <div id="sess-simplex-tx-wrap" class="cal-sidebar-section" style="display:none">
+                    <h3 class="section-label">TRANSMITTING</h3>
+                    <div class="simplex-stat-row">
+                        <span class="simplex-stat-label">Chunk</span>
+                        <span id="simplex-chunk-display" class="simplex-stat-value">0 / 0</span>
+                    </div>
+                    <div class="simplex-stat-row">
+                        <span class="simplex-stat-label">Pass</span>
+                        <span id="simplex-loop-display" class="simplex-stat-value">1</span>
+                    </div>
+                    <div class="transfer-row" style="margin-top:6px">
+                        <div class="transfer-progress-bar">
+                            <div id="simplex-tx-fill" class="transfer-progress-fill simplex-tx-fill"></div>
+                        </div>
+                        <span id="simplex-tx-pct" class="transfer-percent">0%</span>
+                    </div>
+                </div>
+
+                <!-- Chat log (messaging mode) -->
+                <div id="sess-chat-wrap" class="cal-sidebar-section sess-chat-section">
+                    <h3 class="section-label">MESSAGES</h3>
+                    <div class="sess-chat-area" id="chat-area">
+                        <div class="system-msg">PHOTON v2.0 ready</div>
+                    </div>
+                    <div class="sess-input-row" id="msg-input-area">
+                        <input type="text" id="msg-input" placeholder="Type message..." disabled>
+                        <button id="send-btn" disabled>TX</button>
+                    </div>
+                </div>
+
+                <!-- File transfer (file modes) -->
+                <div id="sess-file-wrap" class="cal-sidebar-section" style="display:none">
+                    <h3 class="section-label">FILE TRANSFER</h3>
+                    <!-- Drop zone (send mode) -->
+                    <div id="session-file-drop-wrap" style="display:none">
+                        <div class="file-drop" id="file-drop">
+                            <div class="file-drop-text">Drop file to send</div>
+                            <input type="file" id="file-input" style="display:none">
+                        </div>
+                    </div>
+                    <!-- Progress -->
+                    <div id="transfer-bar" style="display:none">
+                        <div class="transfer-name" id="transfer-filename"></div>
+                        <div class="transfer-meta">
+                            <span id="transfer-size" class="transfer-detail"></span>
+                            <span id="transfer-speed" class="transfer-detail"></span>
+                            <span id="transfer-eta" class="transfer-detail"></span>
+                        </div>
+                        <div class="transfer-row">
+                            <div class="transfer-progress-bar">
+                                <div id="transfer-progress-fill" class="transfer-progress-fill"></div>
+                            </div>
+                            <span id="transfer-percent" class="transfer-percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR Settings -->
+                <div class="cal-sidebar-section">
+                    <h3 class="section-label">QR SETTINGS</h3>
+                    <div class="cal-setting-row">
+                        <label>Version</label>
+                        <select id="qr-version-session">
+                            <option value="3">v3 (29x29)</option>
+                            <option value="4">v4 (33x33)</option>
+                            <option value="5">v5 (37x37)</option>
+                            <option value="6" selected>v6 (41x41)</option>
+                            <option value="8">v8 (49x49)</option>
+                            <option value="10">v10 (57x57)</option>
+                            <option value="15">v15 (77x77)</option>
+                        </select>
+                    </div>
+                    <div class="cal-setting-row">
+                        <label>Error Correction</label>
+                        <select id="qr-error-level-session">
+                            <option value="L" selected>L - 7%</option>
+                            <option value="M">M - 15%</option>
+                            <option value="Q">Q - 25%</option>
+                            <option value="H">H - 30%</option>
+                        </select>
+                    </div>
+                    <div class="cal-setting-row">
+                        <label>Frame Rate</label>
+                        <select id="frame-rate-session">
+                            <option value="1000">1 fps</option>
+                            <option value="500">2 fps</option>
+                            <option value="400" selected>2.5 fps</option>
+                            <option value="250">4 fps</option>
+                            <option value="150">6 fps</option>
+                        </select>
+                    </div>
+                    <div id="capacity-display" class="capacity-display">-- bytes/frame</div>
+                </div>
+
+                <!-- Stats -->
+                <div class="sess-stats">
+                    <div class="stat">TX <span class="stat-value" id="stat-tx">0</span></div>
+                    <div class="stat">RX <span class="stat-value" id="stat-rx">0</span></div>
+                    <div class="stat">Err <span class="stat-value" id="stat-errors">0</span></div>
+                    <div class="stat">FEC <span class="stat-value" id="stat-fec">0</span></div>
+                    <div class="stat"><span class="stat-value" id="stat-bps">0</span> B/s</div>
+                    <div class="stat"><span class="stat-value" id="stat-state">IDLE</span></div>
+                </div>
+
+                <!-- Debug -->
+                <button id="loopback-btn" class="action-btn small dim" style="width:100%">Loopback Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="lib/qrcode-generator.js"></script>
+    <script src="lib/jsQR.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/fec.js"></script>
+    <script src="js/encoder.js"></script>
+    <script src="js/physical.js"></script>
+    <script src="js/decoder.js"></script>
+    <script src="js/protocol.js"></script>
+    <script src="js/dtn.js"></script>
+    <script src="js/file-transfer.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

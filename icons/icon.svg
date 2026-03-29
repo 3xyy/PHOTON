@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#06060c"/>
+  <text x="256" y="240" text-anchor="middle" font-family="monospace" font-weight="900" font-size="120" fill="#ff00ff" letter-spacing="8">P</text>
+  <text x="256" y="360" text-anchor="middle" font-family="monospace" font-weight="700" font-size="48" fill="#ff00ff" letter-spacing="4">PHOTON</text>
+  <!-- QR-like grid accent -->
+  <rect x="80" y="400" width="16" height="16" fill="#ff00ff" opacity="0.5"/>
+  <rect x="100" y="400" width="16" height="16" fill="#ff00ff" opacity="0.3"/>
+  <rect x="80" y="420" width="16" height="16" fill="#ff00ff" opacity="0.3"/>
+  <rect x="416" y="400" width="16" height="16" fill="#ff00ff" opacity="0.5"/>
+  <rect x="396" y="400" width="16" height="16" fill="#ff00ff" opacity="0.3"/>
+  <rect x="416" y="420" width="16" height="16" fill="#ff00ff" opacity="0.3"/>
+</svg>
